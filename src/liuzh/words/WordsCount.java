@@ -1,4 +1,4 @@
-package liuzh.interview.words;
+package liuzh.words;
 
 /**
  * title:WordsCount
@@ -29,6 +29,10 @@ public class WordsCount {
 	//计数加1
 	public void add(){
 		count++;
+	}
+	//计数加count
+	public void add(int count){
+		this.count += count;
 	}
 
 }
