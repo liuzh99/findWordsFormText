@@ -19,10 +19,12 @@ import java.util.List;
  * @date 2016年4月27日 下午8:56:46
  */
 public class Calcul implements Runnable{
-	
+	//所有节点的结果集
 	private static List<WordsCount> totalWordsList = new ArrayList<WordsCount>(5000);
 	
+	//当前节点的文件输入流
 	private String inputFileName;
+	//单个节点的计算结果
 	private List<WordsCount> wordsList = new ArrayList<WordsCount>();
 	
 	/**
@@ -123,6 +125,11 @@ public class Calcul implements Runnable{
 		}
 	}
 
+	/**
+	 * 结果输出到文件
+	 * @param filename
+	 * @throws IOException
+	 */
 	public static void output(String filename) throws IOException{
 		OutputStream outputStream = new FileOutputStream(filename);
 		for(int i=0;i<totalWordsList.size();i++){
@@ -131,6 +138,9 @@ public class Calcul implements Runnable{
 		}
 	}
 	
+	/**
+	 * 每个节点的任务
+	 */
 	@Override
 	public void run() {
 		try {
@@ -142,6 +152,12 @@ public class Calcul implements Runnable{
 		
 	}
 	
+	/**
+	 * 分派任务
+	 * @param files
+	 * @param outputFileName
+	 * @throws IOException
+	 */
 	public static void reduce(File[] files,String outputFileName) throws IOException{
 		Calcul calcul = null;
 		List<Thread> threads = new LinkedList<Thread>();
@@ -168,7 +184,6 @@ public class Calcul implements Runnable{
 
 	public static void main(String[] args) {
 		long t1 = System.currentTimeMillis();
-		
 		
 		File dir = new File("D:/input");
 		File[] files = dir.listFiles();
