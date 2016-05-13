@@ -98,7 +98,7 @@
 - 这项技术被广泛应用于分布式系统，我用多线程来模拟多个计算机实现并行计算。
 - 此次优化测试结果：我将106M的文件平均分成7份，计算时长为755ms，如果是4G文件，约需要30秒。但这不重要，因为如果用hadoop实现分布式，总时长只需要一份的时间。
 
-### 使用线程模拟分配任务
+**使用线程模拟分配任务**
 ```java
 	public static void reduce(File[] files,String outputFileName) throws IOException{
 		Calcul calcul = null;
@@ -125,7 +125,7 @@
 	}
 ```
 
-### 汇总结果
+**汇总结果**
 
 ```java
 	private synchronized void collect(){
