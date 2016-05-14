@@ -48,12 +48,12 @@ public class WordsCount implements Runnable{
 		while(keys.hasNext()){
 			key = keys.next();
 			value = wordsMap.get(key);
-			//如果totalWords中有，则将记数合并到totalWords中
+			//如果totalWords中有，将记数合并到totalWords中
 			if(totalWordsMap.containsKey(key)){
 				Integer valuet = totalWordsMap.get(key);
 				totalWordsMap.put(key, value + valuet);
 			}
-			//否则将这个Map元素放入totalWords
+			//如果totalWords中没有，将这个Map元素放入totalWords
 			else{
 				totalWordsMap.put(key, value);
 			}
@@ -91,10 +91,13 @@ public class WordsCount implements Runnable{
 				else if(words.length() != 0){
 					key = words.toString();
 					value = wordsMap.get(key);
-					
+
+					//如果wordsMap中有，则将记数加1
 					if(wordsMap.containsKey(key)){
 						wordsMap.put(key, value + 1);
-					}else{
+					}
+					//如果wordsMap中没有，将些单词加入Map中，记数为1
+					else{
 						wordsMap.put(key, 1);
 					}
 					words.delete(0, words.length());
