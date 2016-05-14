@@ -34,7 +34,7 @@ public class WordsCount implements Runnable{
 	private Map<String,Integer> wordsMap = new HashMap<String,Integer>();
 	
 	/**
-	 * 将wordsList中的结果汇总到totalWordsList
+	 * 将wordsMap中的结果汇总到totalWordsMap
 	 * @param wordsList
 	 */
 	private synchronized void collect(){
@@ -87,7 +87,7 @@ public class WordsCount implements Runnable{
 				if(Character.isAlphabetic(ch)){
 					words.append(ch);
 				}
-				//如果不是字母，则判断words中是否有内容，如果有，则将其加入到wordsList中
+				//如果不是字母，则判断words中是否有内容，如果有，则将其加入到wordsMap中
 				else if(words.length() != 0){
 					key = words.toString();
 					value = wordsMap.get(key);
