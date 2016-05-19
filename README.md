@@ -59,23 +59,8 @@ public class WordsCount{
 		wordsMapList.add(map);
 	}
 	
-	
 	//定义每个文件的大小为4M
 	private final int fileBufferSize = 4*1024*1024;
-	
-	//输入的文件名
-	private String inputFileName;
-	//输入文件的路径
-	String outputPath;
-	//存储分离的文件
-	private List<String> fileList = new LinkedList<String>();
-	
-	//用数据作为分离后的各个文件名
-	private Integer fileNameCount = 0;
-	public String getNewFileName(){
-		fileList.add(outputPath + fileNameCount.toString());
-		return outputPath + (fileNameCount++).toString();
-	}
 	
 	/**
 	 * 分离文件
@@ -183,7 +168,7 @@ public class WordsCount{
 		System.out.println(tpe.awaitTermination(1, TimeUnit.DAYS));
 		
 		collect();
-
+		
 		output(outputFileName);
 	}
 	
