@@ -1,4 +1,4 @@
-# 统计文本文件中每个英文单词出现的次数
+## 统计文本文件中每个英文单词出现的次数
 
 
 此题需要将查找的历史结果保留下来，并且集合大小会增加多次，后续还需要在这个集合中不断查找，所以，``为了查询速度和插入速度，我打算使用二分搜索算法，数据结构使用链表，并用数组链表实例化。``
@@ -149,5 +149,50 @@
 		}
 	}
 ```
+## 第四次使用HashMap记数，简化代码<br>
+使用Map可以直接通过查找到的单词对应到记数，不需要写从集合中查找单词的代码
+```java
+	private void find() throws IOException{
+		
+		InputStream inputStream = new FileInputStream(inputFileName);
+		
+		char ch;
+		StringBuilder words = new StringBuilder();
+		
+		int byteLength = 1024, readLength;
+		byte[] b = new byte[byteLength];
+		
+		//wordsMap中某个单词的记数
+		String key;
+		Integer value;
+		
+		while((readLength=inputStream.read(b)) != -1){
+			for(int i = 0;i < readLength; i++){
+				ch = (char)b[i];
+				//判断ch是否是字母
+				if(Character.isAlphabetic(ch)){
+					words.append(ch);
+				}
+				//如果不是字母，则判断words中是否有内容，如果有，则将其加入到wordsMap中
+				else if(words.length() != 0){
+					key = words.toString();
+					value = wordsMap.get(key);
+
+					//如果wordsMap中有，则将记数加1
+					if(wordsMap.containsKey(key)){
+						wordsMap.put(key, value + 1);
+					}
+					//如果wordsMap中没有，将些单词加入Map中，记数为1
+					else{
+						wordsMap.put(key, 1);
+					}
+					words.delete(0, words.length());
+				}
+			}
+		}
+	}
+```
+
+
 
     最后：感谢qida_wu对程序提出的意见！
