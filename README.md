@@ -2,14 +2,6 @@
 
 - Task继承Callable接口，可在线程结束后获取到返回值
 ```java
-package liuzh.words;
-
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.Callable;
-
 public class Task implements Callable<Map<String,Integer>>{
 	
 	//当前节点的文件输入流
@@ -17,28 +9,8 @@ public class Task implements Callable<Map<String,Integer>>{
 	public Task(String inputFileName) {
 		this.inputFileName = inputFileName;
 	}
-	
-	
 	//存储计算结果
 	private Map<String,Integer> wordsMap = new HashMap<String,Integer>();
-	
-	private void addWords(String words){
-		if(words.isEmpty()){
-			return;
-		}
-		//wordsMap中某个单词的记数
-		String key = words.toString();
-		Integer value = wordsMap.get(key);
-
-		//如果wordsMap中有，则将记数加1
-		if(wordsMap.containsKey(key)){
-			wordsMap.put(key, value + 1);
-		}
-		//如果wordsMap中没有，将些单词加入Map中，记数为1
-		else{
-			wordsMap.put(key, 1);
-		}
-	}
 	
 	@Override
 	public Map<String, Integer> call() throws Exception {
@@ -72,31 +44,8 @@ public class Task implements Callable<Map<String,Integer>>{
 ```
 - 将文件分离成多个文件，就能分配给多个线程查找单词的记数，当前默认大小为4M
 ```java
-package liuzh.words;
-
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-
-import org.junit.Test;
-
-
-
 /**
- * title:Calcul
+ * title:WordsCount
  * descript:从指定文件中查找
  * @author liuzh
  * @date 2016年4月27日 下午8:56:46
@@ -171,21 +120,8 @@ public class WordsCount{
 		inputStream.close();
 		outputStream.close();
 	}
-
-	@Test
-	public void demo(){
-		inputFileName = "D:/test/input.txt";
-
-		try {
-			splitFile();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-	}
 	/**
-	 * 将wordsList中的结果汇总到totalWordsList
-	 * @param wordsList
+	 * 将wordsMapList中的结果汇总到totalWordsMap
 	 * @throws ExecutionException 
 	 * @throws InterruptedException 
 	 */
@@ -214,24 +150,6 @@ public class WordsCount{
 			}
 		}
 	}
-	/**
-	 * 结果输出到文件
-	 * @param filename
-	 * @throws IOException
-	 */
-	public void output(String filename) throws IOException{
-		OutputStream outputStream = new FileOutputStream(filename);
-
-		//按顺序输出
-		Object[] keys = totalWordsMap.keySet().toArray();
-		Arrays.sort(keys);
-		for(Object key : keys){
-			Integer value = totalWordsMap.get(key);
-			outputStream.write((key + " ").getBytes());
-			outputStream.write((value + "\n").getBytes());
-		}
-	}
-	
 	
 	/**
 	 * 分派任务
