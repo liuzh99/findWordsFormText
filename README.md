@@ -1,66 +1,55 @@
 ## 统计文本文件中每个英文单词出现的次数
 
-
-此题需要将查找的历史结果保留下来，并且集合大小会增加多次，后续还需要在这个集合中不断查找，所以，``为了查询速度和插入速度，我打算使用二分搜索算法，数据结构使用链表，并用数组链表实例化。``
-
-
-一：首先定义集合的结构：WordsCount，主要是以下两个属性<br>
+- Task继承Callable接口，可在线程结束后获取到返回值
 ```java
-    //单词出现的次数
-    private int count;
-    //当前单词
-    private String words;
-```
+package liuzh.words;
 
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.Callable;
 
-二：开始设计程序：关键函数，find(String)<br>
-## 第一次实现功能
-```java
-	public void find(String filename) throws IOException {
-		InputStream inputStream = new FileInputStream(filename);
-		int intValue;
-		char ch;
-		int insertIndex;
-		StringBuilder words = new StringBuilder();
-		while ((intValue = inputStream.read()) != -1) {
-			ch = (char) intValue;
-			// 判断ch是否是字母
-			if (Character.isAlphabetic(ch)) {
-				words.append(ch);
-			}
-			// 如果不是字母，则判断words中是否有内容，如果有，则将其加入到wordsList中
-			else if (words.length() != 0) {
-				insertIndex = findInsertIndex(words.toString());
-				// 如果集合为空，直接加入
-				if (wordsList.size() == 0) {
-					wordsList.add(new WordsCount(words.toString()));
-				}
-				// words对应的索引位置
-				else if (wordsList.get(insertIndex).getWords()
-						.equals(words.toString())) {
-					wordsList.get(insertIndex).add();
-				}
-				// words对应的插入位置
-				else {
-					wordsList.add(insertIndex, new WordsCount(words.toString()));
-				}
-				// 清空words，开始一次新的查询
-				words.delete(0, words.length());
-			}
+public class Task implements Callable<Map<String,Integer>>{
+	
+	//当前节点的文件输入流
+	private String inputFileName;
+	public Task(String inputFileName) {
+		this.inputFileName = inputFileName;
+	}
+	
+	
+	//存储计算结果
+	private Map<String,Integer> wordsMap = new HashMap<String,Integer>();
+	
+	private void addWords(String words){
+		if(words.isEmpty()){
+			return;
+		}
+		//wordsMap中某个单词的记数
+		String key = words.toString();
+		Integer value = wordsMap.get(key);
+
+		//如果wordsMap中有，则将记数加1
+		if(wordsMap.containsKey(key)){
+			wordsMap.put(key, value + 1);
+		}
+		//如果wordsMap中没有，将些单词加入Map中，记数为1
+		else{
+			wordsMap.put(key, 1);
 		}
 	}
-```
-发现这段代码执行的时间比较长，于是我猜想可能是从文件读取字符导致的。于是我将while里面的代码注释掉，发现大部分时间都是从文件读取字符，于是我打算定义一个字节数组，一次性读取多个字符。改为如下代码之后，速度果然有了巨大的提升，原来需要24s，现在只需要415ms
-## 第二次优化IO性能
-```java
-	public void find(String filename) throws IOException{
-		InputStream inputStream = new FileInputStream(filename);
-		int intValue;
+	
+	@Override
+	public Map<String, Integer> call() throws Exception {
+		InputStream inputStream = new FileInputStream(inputFileName);
+		
 		char ch;
-		int insertIndex;
 		StringBuilder words = new StringBuilder();
+		
 		int byteLength = 1024, readLength;
 		byte[] b = new byte[byteLength];
+		
 		while((readLength=inputStream.read(b)) != -1){
 			for(int i = 0;i < readLength; i++){
 				ch = (char)b[i];
@@ -70,129 +59,218 @@
 				}
 				//如果不是字母，则判断words中是否有内容，如果有，则将其加入到wordsList中
 				else if(words.length() != 0){
-					insertIndex = findInsertIndex(words.toString());
-					//如果集合为空，直接加入
-					if(wordsList.size() == 0){
-						wordsList.add(new WordsCount(words.toString()));
-					}
-					//words对应的索引位置
-					else if(wordsList.get(insertIndex).getWords().equals(words.toString())){
-						wordsList.get(insertIndex).add();
-					}
-					//words对应的插入位置
-					else{
-						wordsList.add(insertIndex, new WordsCount(words.toString()));
-					}
-					//清空words，开始一次新的查询
+					addWords(words.toString());
 					words.delete(0, words.length());
 				}
 			}
+			addWords(words.toString());
 		}
+		return wordsMap;
 	}
+}
+
 ```
-最后：由于我使用的测试数据是13.6M，经过计算，如果数据是4G，所需时间大约为2分钟。<br>
-对于内存，除了使用到1024byte进行读取加速以外，没有申请其它不必要的内存，所以内存的使用是很低的。
-
-## 第三次优化计算方式
-- 此次优化来源于google论文MapReduce的思想，将任务分配到多个节点进行计算，最终把各节点的计算结果汇总。
-- 这项技术被广泛应用于分布式系统，我用多线程来模拟多个计算机实现并行计算。
-- 此次优化测试结果：我将106M的文件平均分成7份，计算时长为755ms，如果是4G文件，约需要30秒。但这不重要，因为如果用hadoop实现分布式，总时长只需要一份的时间。
-
-**使用线程模拟分配任务**
+- 将文件分离成多个文件，就能分配给多个线程查找单词的记数，当前默认大小为4M
 ```java
-	public static void reduce(File[] files,String outputFileName) throws IOException{
-		Calcul calcul = null;
-		List<Thread> threads = new LinkedList<Thread>();
-		//创建线程
-		for(File file : files){
-			calcul = new Calcul();
-			calcul.inputFileName = file.getAbsolutePath();
-			threads.add(new Thread(calcul));
-		}
-		//开启线程
-		for(Thread thread : threads){
-			thread.start();
-		}
-		//等待所有线程结束
-		for(Thread thread : threads){
-			try {
-				thread.join();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-		}
-		output(outputFileName);
+package liuzh.words;
+
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
+import org.junit.Test;
+
+
+
+/**
+ * title:Calcul
+ * descript:从指定文件中查找
+ * @author liuzh
+ * @date 2016年4月27日 下午8:56:46
+ */
+public class WordsCount{
+	//所有结果
+	private Map<String,Integer> totalWordsMap = new HashMap<String,Integer>();
+	//各个线程的结果
+	private List<Future<Map<String,Integer>>> wordsMapList = new LinkedList<Future<Map<String,Integer>>>();
+	private synchronized void addToWordsMap(Future<Map<String,Integer>> map){
+		wordsMapList.add(map);
 	}
-```
-
-**汇总结果**
-
-```java
-	private synchronized void collect(){
-		if(totalWordsList.size() == 0){
-			totalWordsList.addAll(wordsList);
-			return;
-		}
-		for(WordsCount wordsCount : wordsList){
-			int index = findInsertIndex(totalWordsList, wordsCount.getWords());
-			if(totalWordsList.size() == 0){
-				totalWordsList.add(wordsCount);
-			}
-			//words对应的索引位置
-			else if(totalWordsList.get(index).getWords().equals(wordsCount.getWords())){
-				totalWordsList.get(index).add(wordsCount.getCount());
-			}
-			//words对应的插入位置
-			else{
-				totalWordsList.add(index, wordsCount);
-			}
-		}
+	
+	
+	//定义每个文件的大小为4M
+	private final int fileBufferSize = 4*1024*1024;
+	
+	//输入的文件名
+	private String inputFileName;
+	//输入文件的路径
+	String outputPath;
+	//存储分离的文件
+	private List<String> fileList = new LinkedList<String>();
+	
+	//用数据作为分离后的各个文件名
+	private Integer fileNameCount = 0;
+	public String getNewFileName(){
+		fileList.add(outputPath + fileNameCount.toString());
+		return outputPath + (fileNameCount++).toString();
 	}
-```
-## 第四次使用HashMap记数，简化代码<br>
-使用Map可以直接通过查找到的单词对应到记数，不需要写从集合中查找单词的代码
-```java
-	private void find() throws IOException{
-		
+	
+	/**
+	 * 分离文件
+	 * 先读取fileBufferSize个字节的数据，再找到后面不是字母的位置，从此位置分离文件
+	 * 所以分离后的文件可能会比fileBufferSize多几个字节
+	 * @throws IOException 
+	 */
+	private void splitFile() throws IOException{
+		byte[] b = new byte[fileBufferSize];
 		InputStream inputStream = new FileInputStream(inputFileName);
 		
-		char ch;
-		StringBuilder words = new StringBuilder();
-		
-		int byteLength = 1024, readLength;
-		byte[] b = new byte[byteLength];
-		
-		//wordsMap中某个单词的记数
-		String key;
-		Integer value;
-		
-		while((readLength=inputStream.read(b)) != -1){
-			for(int i = 0;i < readLength; i++){
-				ch = (char)b[i];
-				//判断ch是否是字母
-				if(Character.isAlphabetic(ch)){
-					words.append(ch);
-				}
-				//如果不是字母，则判断words中是否有内容，如果有，则将其加入到wordsMap中
-				else if(words.length() != 0){
-					key = words.toString();
-					value = wordsMap.get(key);
+		outputPath = inputFileName.substring(0,inputFileName.lastIndexOf("/") + 1);
 
-					//如果wordsMap中有，则将记数加1
-					if(wordsMap.containsKey(key)){
-						wordsMap.put(key, value + 1);
-					}
-					//如果wordsMap中没有，将些单词加入Map中，记数为1
-					else{
-						wordsMap.put(key, 1);
-					}
-					words.delete(0, words.length());
+		//当前读取的长度
+		OutputStream outputStream = new FileOutputStream(getNewFileName());
+		int readLength=inputStream.read(b);
+		if(readLength == -1){
+			outputStream.close();
+			inputStream.close();
+			return;
+		}
+		outputStream.write(b);
+		while((readLength=inputStream.read(b)) != -1){
+			//把前面是字母的输入到上一个文件
+			int i;
+			for(i=0;i<readLength;i++){
+				if(Character.isAlphabetic(b[i])){
+					outputStream.write(b[i]);
+				}else{
+					break;
+				}
+			}
+			//表示readLength全都是字母
+			if(i == readLength){
+				continue;
+			}
+			//打开一个新的文件，将剩余的字母输入到新文件中
+			outputStream.close();
+			outputStream = new FileOutputStream(getNewFileName());
+			outputStream.write(b, i, readLength - i);
+		}
+		inputStream.close();
+		outputStream.close();
+	}
+
+	@Test
+	public void demo(){
+		inputFileName = "D:/test/input.txt";
+
+		try {
+			splitFile();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+	}
+	/**
+	 * 将wordsList中的结果汇总到totalWordsList
+	 * @param wordsList
+	 * @throws ExecutionException 
+	 * @throws InterruptedException 
+	 */
+	private void collect() throws InterruptedException, ExecutionException{
+		for (Future<Map<String, Integer>> map : wordsMapList) {
+
+			if (totalWordsMap.size() == 0) {
+				totalWordsMap.putAll(map.get());
+				continue;
+			}
+			Iterator<String> keys = map.get().keySet().iterator();
+			String key;
+			Integer value;
+			while (keys.hasNext()) {
+				key = keys.next();
+				value = map.get().get(key);
+				// 找到，则加入记数
+				if (totalWordsMap.containsKey(key)) {
+					Integer valuet = totalWordsMap.get(key);
+					totalWordsMap.put(key, value + valuet);
+				}
+				// 没找到，加入一个元素
+				else {
+					totalWordsMap.put(key, value);
 				}
 			}
 		}
 	}
-```
+	/**
+	 * 结果输出到文件
+	 * @param filename
+	 * @throws IOException
+	 */
+	public void output(String filename) throws IOException{
+		OutputStream outputStream = new FileOutputStream(filename);
 
+		//按顺序输出
+		Object[] keys = totalWordsMap.keySet().toArray();
+		Arrays.sort(keys);
+		for(Object key : keys){
+			Integer value = totalWordsMap.get(key);
+			outputStream.write((key + " ").getBytes());
+			outputStream.write((value + "\n").getBytes());
+		}
+	}
+	
+	
+	/**
+	 * 分派任务
+	 * @param files
+	 * @param outputFileName
+	 * @throws IOException
+	 * @throws InterruptedException 
+	 * @throws ExecutionException 
+	 */
+	public void reduce(String inputFileName,String outputFileName) throws IOException, InterruptedException, ExecutionException{
+		this.inputFileName = inputFileName;
+		//分离文件
+		splitFile();
+		
+		WordsCount wordsCount = null;
+		
+		int maximumPoolSize = 5;
+		
+		ThreadPoolExecutor tpe = new ThreadPoolExecutor(3, maximumPoolSize, 0, TimeUnit.SECONDS,
+				new LinkedBlockingDeque<Runnable>(),
+				new ThreadPoolExecutor.CallerRunsPolicy());
+		
+		for(int i=0;i<fileList.size();i++){
+			Task task = new Task(fileList.get(i));
+			Future<Map<String,Integer>> result = tpe.submit(task);
+			addToWordsMap(result);
+		}
+		tpe.shutdown();
+		
+		//1天，模拟永远等待
+		System.out.println(tpe.awaitTermination(1, TimeUnit.DAYS));
+		
+		collect();
+
+		output(outputFileName);
+	}
+	
+}
+```
 
 
     最后：感谢qida_wu对程序提出的意见！
